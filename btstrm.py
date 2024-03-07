@@ -127,7 +127,7 @@ def call_fzf_with_results(results):
         for result in results:
             temp_file.write(f"{result['title']}|{result['seeds']}|{result['size']}|{result['link']}\n")
         temp_file.flush()
-        selected = subprocess.check_output(['fzf', '--delimiter', '\|', '--with-nth', '1,2,3', '--preview-window=up:1:hidden', '--preview="echo {}"', '-q', ''], stdin=open(temp_file.name))
+        selected = subprocess.check_output(['fzf', '--no-sort', '--delimiter', '\|', '--with-nth', '1,2,3', '--preview-window=up:1:hidden', '--preview="echo {}"', '-q', ''], stdin=open(temp_file.name))
         return selected.decode('utf-8').split('|')[-1]
 
 def main():
@@ -147,7 +147,7 @@ def main():
             for srcset, title in results:
                 temp_file.write(f"{title}\n")
             temp_file.flush()
-            selected_title = subprocess.check_output(['fzf', '-q', ''], stdin=open(temp_file.name))
+            selected_title = subprocess.check_output(['fzf', '--no-sort', '-q', ''], stdin=open(temp_file.name))
             query = selected_title.decode('utf-8').strip()
     elif args.URI:
         query = args.URI
