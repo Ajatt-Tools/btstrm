@@ -63,6 +63,14 @@ def search_alternative_titles(search_term):
     results = parse_html_for_posters_and_titles(html_content)
     return results
 
+def load_image(image_url):
+    response = requests.get(image_url, stream=True)
+    response.raise_for_status()
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as file:
+        shutil.copyfileobj(response.raw, file)
+
+    return file.name
 
 def which(x):
     for d in os.getenv("PATH", "").split(":"):
@@ -133,9 +141,16 @@ def search_torrents_threaded(query, indexer):
 def call_fzf_with_results(results):
     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
         for result in results:
-            temp_file.write(f"{result['title']}|{result['seeds']}|{result['size']}|{result['link']}\n")
+            temp_file.write(f"{result['title']}\t{result['seeds']}\t{result['size']}\t{result['link']}\n")
         temp_file.flush()
-        selected = subprocess.check_output(['fzf', '--no-sort', '--delimiter', '\|', '--with-nth', '1,2,3', '--preview-window=up:1:hidden', '--preview="echo {}"', '-q', ''], stdin=open(temp_file.name))
+
+        selected = subprocess.check_output(['fzf', '--height=20', '--no-sort', '--delimiter', '\t', '--with-nth', '1,2,3',
+                                   "--preview", "echo {} | awk -F'\t' '{print \"\\033[1mName:\\033[0m \", $1, \"\\n\\033[1mSeeders:\\033[0m \", $2, \"\\n\\033[1mSize:\\033[0m \", $3}'",
+                                   '-q', ''], stdin=open(temp_file.name))
+
+
+
+
         return selected.decode('utf-8').split('|')[-1]
 
 
@@ -187,10 +202,21 @@ def main():
 
         with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
             for srcset, title in results:
-                temp_file.write(f"{title}\n")
+                srcset = load_image(srcset)
+                # Save both poster link and title separated by a tab
+                temp_file.write(f"{srcset}\t{title}\n")
             temp_file.flush()
-            selected_title = subprocess.check_output(['fzf', '--no-sort', '-q', ''], stdin=open(temp_file.name))
-            query = selected_title.decode('utf-8').strip()
+
+            selected_title = subprocess.check_output(['fzf', '--height=20', '--no-sort',
+                                                      "--delimiter", '\t',
+                                                      "--with-nth", '2',
+                                                      "--preview", "echo {} | awk -F'\t' '{print $1}' | xargs -I{} sh -c 'chafa -s x20 --format=symbols {}'",
+                                                      '-q', ''], stdin=open(temp_file.name))
+
+
+
+
+            query = selected_title.decode('utf-8').strip().split('\t')[1]  # Get only the title part from selection
     elif args.URI:
         query = args.URI
         uri = args.URI
@@ -225,9 +251,9 @@ def main():
         content_type = response.headers.get("Content-Type")
 
         if content_type == "application/x-bittorrent":
-            with open("temp.torrent", "wb") as f:
+            with open("/tmp/temp.torrent", "wb") as f:
                 f.write(response.content)
-            uri = "temp.torrent"
+            uri = "/tmp/temp.torrent"
         elif "Location" in response.headers:
             uri = response.headers["Location"]
 
