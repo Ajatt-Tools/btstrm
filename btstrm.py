@@ -15,9 +15,11 @@ from urllib.parse import urlparse
 from requests import get
 from urllib.parse import quote
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 
 # Configuration
-LANG="es-MX"
+LANG="es-ES"
 JACKETT_API_KEY = ""
 JACKETT_URL = "http://127.0.0.1:9117"
 extensions = ("mp4", "m4v", "mkv", "avi", "mpg", "mpeg", "flv", "webm")
@@ -122,6 +124,10 @@ def search_torrents(query, indexer):
 
     return torrents
 
+
+def search_torrents_threaded(query, indexer):
+    return search_torrents(query, indexer)
+
 def call_fzf_with_results(results):
     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
         for result in results:
@@ -159,12 +165,14 @@ def main():
         indexers = get_jackett_indexers()
         all_torrents = []
 
-        with tqdm(total=len(indexers), desc='Searching torrents', ncols=70) as pbar:
-            for indexer in indexers:
-                torrents = search_torrents(query, indexer)
-                all_torrents.extend(torrents)
 
-                pbar.update()
+        with tqdm(total=len(indexers), desc='Searching torrents', ncols=70) as pbar:
+            with ThreadPoolExecutor(max_workers=20) as executor:
+                futures = {executor.submit(search_torrents_threaded, query, indexer): indexer for indexer in indexers}
+                for future in concurrent.futures.as_completed(futures):
+                    torrents = future.result()
+                    all_torrents.extend(torrents)
+                    pbar.update()
 
             pbar.close()
 
