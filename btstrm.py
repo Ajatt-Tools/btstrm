@@ -268,6 +268,9 @@ def main():
     os.makedirs(mount_dir, exist_ok=True)
     os.makedirs(ddir, exist_ok=True)
     mountpoint = tempfile.mkdtemp(prefix="btstrm-", dir=mount_dir)
+
+
+
     if args.keep:
         failed=subprocess.call(["btfs", "--keep",f"--data-directory={ddir}",uri,mountpoint])
     else:
@@ -281,9 +284,21 @@ def main():
         while not os.listdir(mountpoint):
             time.sleep(0.25)
 
+        # DEBUG
+        subdirs = [os.path.join(ddir, d) for d in os.listdir(ddir) if os.path.isdir(os.path.join(ddir, d))]
+
+        last_created_dir = max(subdirs, key=os.path.getmtime)
+
+
         media = sorted(
             i for i in find_files(mountpoint) if not is_sample(i) and is_video(i)
         )
+
+        mountpoint_removed = [m.replace(mountpoint, '') for m in media]
+        file_paths = [last_created_dir + "/files" + m for m in mountpoint_removed]
+
+        for file_path in file_paths:
+            print(file_path)
 
         if media:
             status = subprocess.call(list(player) + media, stdin=sys.stdin)
