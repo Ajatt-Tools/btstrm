@@ -3,12 +3,14 @@
 import requests
 from tqdm import tqdm
 import sys
+import math
 import os
 import os.path
 import tempfile
 import shutil
 import time
 import subprocess
+from subprocess import call
 import xml.etree.ElementTree as ET
 import argparse
 from urllib.parse import urlparse
@@ -136,9 +138,43 @@ def call_fzf_with_results(results):
         selected = subprocess.check_output(['fzf', '--no-sort', '--delimiter', '\|', '--with-nth', '1,2,3', '--preview-window=up:1:hidden', '--preview="echo {}"', '-q', ''], stdin=open(temp_file.name))
         return selected.decode('utf-8').split('|')[-1]
 
+
+
+def scan(directory, indent=""):
+    completed_files = []
+    try:
+        for path in sorted(os.listdir(directory)):
+            absolute_path = os.path.join(directory, path)
+            if os.path.isdir(absolute_path):
+                completed_files.extend(scan(absolute_path, indent + "    "))
+            else:
+                file_stat = os.stat(absolute_path)
+                progress = round(100.0 * 512.0 * file_stat.st_blocks / file_stat.st_size, 0)
+                if progress == 100:
+                    completed_files.append(absolute_path)
+    except PermissionError:
+        print("Access denied to directory: ", directory)
+    return completed_files
+
+
+def add_to_playlist(completed_files):
+    try:
+        impd_path = which("impd")
+        if impd_path:
+            print("Adding downloaded files into impd:")
+            print(completed_files)
+            call([impd_path, "add"] + completed_files)
+        else:
+            print("impd not found in PATH.")
+    except Exception as e:
+        print(f"Error: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--player", action="store", help="player to launch")
+    parser.add_argument('-k', '--keep', action='store_true', help='keep files and do not delete them')
+    parser.add_argument("-i", "--impd", action="store_true", help="add downloaded files into impd")
     parser.add_argument("-t", "--title", action="store", help="search for alternative titles")
     parser.add_argument("URI", nargs='?', action="store", help="magnet link or HTTP metadata URL to play", default="")
     args = parser.parse_args()
@@ -164,7 +200,6 @@ def main():
     if not (query.startswith("magnet:") or query.endswith(".torrent") or query.startswith("http://127.0.0.1:9117")) and query:
         indexers = get_jackett_indexers()
         all_torrents = []
-
 
         with tqdm(total=len(indexers), desc='Searching torrents', ncols=70) as pbar:
             with ThreadPoolExecutor(max_workers=20) as executor:
@@ -202,10 +237,15 @@ def main():
         print("Could not find a player", file=sys.stderr)
         return
 
-    mount_dir = os.path.join(os.environ['HOME'], '.cache', 'btplay')
+    mount_dir = os.path.join(os.environ['HOME'], '.cache', 'btstrm')
+    ddir = os.path.join(mount_dir, 'download')
     os.makedirs(mount_dir, exist_ok=True)
-    mountpoint = tempfile.mkdtemp(prefix="btplay-", dir=mount_dir)
-    failed=subprocess.call(["btfs",uri,mountpoint])
+    os.makedirs(ddir, exist_ok=True)
+    mountpoint = tempfile.mkdtemp(prefix="btstrm-", dir=mount_dir)
+    if args.keep:
+        failed=subprocess.call(["btfs", "--keep",f"--data-directory={ddir}",uri,mountpoint])
+    else:
+        failed=subprocess.call(["btfs",f"--data-directory={ddir}",uri,mountpoint])
 
     if failed:
         exit(mountpoint, failed)
@@ -225,6 +265,13 @@ def main():
             print("No video media found", file=sys.stderr)
             status = 3
 
+        if media and status == 0 and args.impd:
+            completed_files = scan(mountpoint)
+            if completed_files:
+                add_to_playlist(completed_files)
+            else:
+                print("No fully downloaded media found.")
+
     except KeyboardInterrupt:
         status = 1
 
@@ -236,6 +283,5 @@ def main():
         subprocess.call(["fusermount", "-z", "-u", mountpoint])
 
     exit(mountpoint, status)
-
 if __name__ == "__main__":
     main()
