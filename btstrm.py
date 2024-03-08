@@ -151,7 +151,7 @@ def call_fzf_with_results(results):
 
 
 
-        return selected.decode('utf-8').split('|')[-1]
+        return selected.decode('utf-8').split('\t')[-1]
 
 
 
