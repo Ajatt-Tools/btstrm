@@ -72,6 +72,20 @@ def load_image(image_url):
 
     return file.name
 
+
+def load_images_threaded(urls):
+    images = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(load_image, url): url for url in urls}
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(urls), desc='Loading images', ncols=70):
+            try:
+                tmp_file_name = future.result()
+                images.append(tmp_file_name)
+            except Exception as e:
+                print(f"Error loading image: {e}")
+    return images
+
+
 def which(x):
     for d in os.getenv("PATH", "").split(":"):
         if os.path.exists(os.path.join(d, x)):
@@ -200,11 +214,12 @@ def main():
             print("No alternative titles found.")
             return
 
+        poster_urls = [srcset for srcset, _ in results]
+        loaded_posters = load_images_threaded(poster_urls)
+
         with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
-            for srcset, title in results:
-                srcset = load_image(srcset)
-                # Save both poster link and title separated by a tab
-                temp_file.write(f"{srcset}\t{title}\n")
+            for (srcset, title), poster_file in zip(results, loaded_posters):
+                temp_file.write(f"{poster_file}\t{title}\n")
             temp_file.flush()
 
             selected_title = subprocess.check_output(['fzf', '--height=20', '--no-sort',
@@ -216,7 +231,7 @@ def main():
 
 
 
-            query = selected_title.decode('utf-8').strip().split('\t')[1]  # Get only the title part from selection
+            query = selected_title.decode('utf-8').strip().split('\t')[1]
     elif args.URI:
         query = args.URI
         uri = args.URI
@@ -284,7 +299,7 @@ def main():
         while not os.listdir(mountpoint):
             time.sleep(0.25)
 
-        # DEBUG
+        # TODO
         subdirs = [os.path.join(ddir, d) for d in os.listdir(ddir) if os.path.isdir(os.path.join(ddir, d))]
 
         last_created_dir = max(subdirs, key=os.path.getmtime)
