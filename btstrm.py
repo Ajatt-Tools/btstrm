@@ -6,6 +6,9 @@ import sys
 import math
 import os
 import os.path
+import threading
+import re
+from colorama import Fore
 import tempfile
 import shutil
 import time
@@ -25,9 +28,11 @@ LANG="es-ES"
 JACKETT_API_KEY = ""
 JACKETT_URL = "http://127.0.0.1:9117"
 extensions = ("mp4", "m4v", "mkv", "avi", "mpg", "mpeg", "flv", "webm")
+home_dir = os.path.expanduser('~')
 players = (
     ("omxplayer", "--timeout", "60"),
-    ("mpv",),
+    ("mpv","--really-quiet","--cache=no"),
+    # ("mpv", "--pause", "--cache=yes", "--cache-on-disk=yes", "--demuxer-thread=yes", "--demuxer-cache-dir=" + home_dir + "/.cache/mpv"),
     ("vlc", "--file-caching", "10000"),
 )
 
@@ -126,7 +131,7 @@ def get_jackett_indexers():
 def search_torrents(query, indexer):
     torrents = []
     try:
-        response = requests.get(f"{JACKETT_URL}/api/v2.0/indexers/{indexer}/results/torznab/api?apikey={JACKETT_API_KEY}&q={query}")
+        response = requests.get(f"{JACKETT_URL}/api/v2.0/indexers/{indexer}/results/torznab/api?apikey={JACKETT_API_KEY}&q={query}", timeout=10)
         response.raise_for_status()
         xml_response = ET.fromstring(response.content)
 
@@ -159,7 +164,7 @@ def call_fzf_with_results(results):
         temp_file.flush()
 
         selected = subprocess.check_output(['fzf', '--height=20', '--no-sort', '--delimiter', '\t', '--with-nth', '1,2,3',
-                                   "--preview", "echo {} | awk -F'\t' '{print \"\\033[1mName:\\033[0m \", $1, \"\\n\\033[1mSeeders:\\033[0m \", $2, \"\\n\\033[1mSize:\\033[0m \", $3}'",
+                                   "--preview", "echo {} | awk -F'\t' '{print \"\\033[1mName:\\033[0m \", $1, \"\\n\\033[1mSeeders:\\033[0m \", $2, \"\\n\\033[1mSize:\\033[0m \", $3}'", "--preview-window", "right:60%:wrap",
                                    '-q', ''], stdin=open(temp_file.name))
 
 
@@ -199,7 +204,43 @@ def add_to_playlist(completed_files):
         print(f"Error: {e}")
 
 
+def read_log(log_file):
+    trackers = {}
+    total_pieces_downloaded = 0
+    first_piece_downloaded = False
+    if os.path.exists(log):
+        with open(log_file, 'r') as f:
+            for line in f.readlines():
+                match = re.search(r'\((.*?)\)\[.*?\].*?received .*?peers: (\d+)', line)
+                if match:
+                    tracker = match.group(1)
+                    peers_count = int(match.group(2))
+                    trackers[tracker] = peers_count
+
+                if re.search(r'piece.*finished downloading', line):
+                    total_pieces_downloaded += 1
+
+                if re.search(r'piece: 0 finished downloading', line):
+                    first_piece_downloaded = True
+
+        total_peers_counts_for_unique_trackers_last_occurrence = sum(trackers.values())
+        # total_downloaded_MBs = round(total_pieces_downloaded * .25,2)
+
+        output_str=""
+
+        if first_piece_downloaded:
+            output_str=Fore.GREEN + f"Peers: {total_peers_counts_for_unique_trackers_last_occurrence}; Downloaded {total_pieces_downloaded} pieces"
+        else:
+            output_str=Fore.LIGHTBLACK_EX + f"Peers: {total_peers_counts_for_unique_trackers_last_occurrence}; Downloaded {total_pieces_downloaded} pieces"
+
+
+        sys.stdout.write("\r"+ " "*80 + "\r"+output_str)
+        sys.stdout.flush()
+
+        threading.Timer(2, read_log, [log_file]).start() # run every 2 seconds
+
 def main():
+    global log
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--player", action="store", help="player to launch")
     parser.add_argument('-k', '--keep', action='store_true', help='keep files and do not delete them')
@@ -214,11 +255,14 @@ def main():
             print("No alternative titles found.")
             return
 
+        # Load all posters first
         poster_urls = [srcset for srcset, _ in results]
         loaded_posters = load_images_threaded(poster_urls)
 
+        # Then display them using fzf
         with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
             for (srcset, title), poster_file in zip(results, loaded_posters):
+                # Save both poster link and title separated by a tab
                 temp_file.write(f"{poster_file}\t{title}\n")
             temp_file.flush()
 
@@ -231,7 +275,7 @@ def main():
 
 
 
-            query = selected_title.decode('utf-8').strip().split('\t')[1]
+            query = selected_title.decode('utf-8').strip().split('\t')[1]  # Get only the title part from selection
     elif args.URI:
         query = args.URI
         uri = args.URI
@@ -287,7 +331,7 @@ def main():
 
 
     if args.keep:
-        failed=subprocess.call(["btfs", "--keep",f"--data-directory={ddir}",uri,mountpoint])
+        failed=subprocess.call(["btfs","--keep",f"--data-directory={ddir}",uri,mountpoint])
     else:
         failed=subprocess.call(["btfs",f"--data-directory={ddir}",uri,mountpoint])
 
@@ -299,10 +343,10 @@ def main():
         while not os.listdir(mountpoint):
             time.sleep(0.25)
 
-        # TODO
+        # DEBUG
         subdirs = [os.path.join(ddir, d) for d in os.listdir(ddir) if os.path.isdir(os.path.join(ddir, d))]
-
         last_created_dir = max(subdirs, key=os.path.getmtime)
+        log = last_created_dir + "/log.txt"
 
 
         media = sorted(
@@ -314,6 +358,9 @@ def main():
 
         for file_path in file_paths:
             print(file_path)
+
+        read_log(log)
+
 
         if media:
             status = subprocess.call(list(player) + media, stdin=sys.stdin)
