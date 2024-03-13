@@ -24,6 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 from unidecode import unidecode
 import configparser
+import atexit
 
 # Configuration
 def load_config():
@@ -171,7 +172,7 @@ def get_jackett_indexers():
 def search_torrents(query, indexer):
     torrents = []
     try:
-        response = requests.get(f"{JACKETT_URL}/api/v2.0/indexers/{indexer}/results/torznab/api?apikey={JACKETT_API_KEY}&q={query}", timeout=10)
+        response = requests.get(f"{JACKETT_URL}/api/v2.0/indexers/{indexer}/results/torznab/api?apikey={JACKETT_API_KEY}&q={query}", timeout=20)
         response.raise_for_status()
         xml_response = ET.fromstring(response.content)
 
@@ -298,6 +299,11 @@ def read_log(log_file):
 
         threading.Timer(2, read_log, [log_file]).start() # run every 2 seconds
 
+
+def cleanup(mount_point):
+    with open(os.devnull, 'w') as DEVNULL:
+        subprocess.call(["fusermount", "-z", "-u", mount_point], stderr=DEVNULL)
+
 def main():
     global log
     parser = argparse.ArgumentParser()
@@ -386,6 +392,7 @@ def main():
     os.makedirs(mount_dir, exist_ok=True)
     os.makedirs(ddir, exist_ok=True)
     mountpoint = tempfile.mkdtemp(prefix="btstrm-", dir=mount_dir)
+    atexit.register(lambda: cleanup(mountpoint))
 
 
 
@@ -442,7 +449,7 @@ def main():
 
     finally:
         subprocess.call(["fusermount", "-z", "-u", mountpoint])
-
+        
     exit(mountpoint, status)
 if __name__ == "__main__":
     main()
