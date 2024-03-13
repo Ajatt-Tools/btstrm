@@ -161,13 +161,13 @@ def normalize_query(query):
     return ascii_query
 
 def search_torrents_threaded(query, indexer):
-    non_ascii_letters = ['ú', 'ñ', 'á', 'é', 'í', 'ó', 'ü'
-                         'á', 'é', 'í', 'ó', 'ú', 'ý',
-                         'à', 'è', 'ì', 'ò', 'ù',
-                         'ä', 'ë', 'ï', 'ö','ü','ÿ',
-                         'â', 'ê', 'î', 'ô', 'û',
-                         'ç', 'ğ', 'ı', 'ş', 'ñ',
-                         'ø', 'å']
+    non_ascii_letters = ['á', 'é', 'í', 'ó', 'ú',
+                         'ü', 'ñ', 'ç', 'à', 'è',
+                         'ì', 'ò', 'ù', 'â', 'ê',
+                         'î', 'ô', 'û', 'ä', 'ë',
+                         'ï', 'ö', 'ü', 'ÿ', 'ø',
+                         'å', 'æ', 'œ', 'ß', 'ð',
+                         'þ', 'ł', 'ž', 'š', 'ý']
 
     if any(letter in query for letter in non_ascii_letters):
         ascii_query = normalize_query(query)
