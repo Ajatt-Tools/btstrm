@@ -26,6 +26,8 @@ from unidecode import unidecode
 import configparser
 import atexit
 
+temp_files = []
+
 # Configuration
 def load_config():
     default_config = {
@@ -113,11 +115,14 @@ def load_image(image_url):
     response = requests.get(image_url, stream=True)
     response.raise_for_status()
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as file:
-        shutil.copyfileobj(response.raw, file)
+    temp_filename = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()) + ".jpg")
 
-    return file.name
+    with open(temp_filename, 'wb') as f:
+        shutil.copyfileobj(response.raw, f)
 
+    temp_files.append(temp_filename)
+
+    return temp_filename
 
 def load_images_threaded(urls):
     images = []
@@ -218,7 +223,7 @@ def search_torrents_threaded(query, indexer):
     return torrents_unique
 
 def call_fzf_with_results(results):
-    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
+    with tempfile.NamedTemporaryFile(mode='w+', delete=True) as temp_file:
         for result in results:
             temp_file.write(f"{result['title']}\t{result['seeds']}\t{result['size']}\t{result['link']}\n")
         temp_file.flush()
@@ -304,6 +309,17 @@ def cleanup(mount_point):
     with open(os.devnull, 'w') as DEVNULL:
         subprocess.call(["fusermount", "-z", "-u", mount_point], stderr=DEVNULL)
 
+
+def cleanup_temp_files():
+    for filepath in temp_files:
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                print(f"Error deleting {filepath}: {e}")
+
+atexit.register(cleanup_temp_files)
+
 def main():
     global log
     parser = argparse.ArgumentParser()
@@ -320,14 +336,11 @@ def main():
             print("No alternative titles found.")
             return
 
-        # Load all posters first
         poster_urls = [srcset for srcset, _ in results]
         loaded_posters = load_images_threaded(poster_urls)
 
-        # Then display them using fzf
-        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(mode='w+', delete=True) as temp_file:
             for (srcset, title), poster_file in zip(results, loaded_posters):
-                # Save both poster link and title separated by a tab
                 temp_file.write(f"{poster_file}\t{title}\n")
             temp_file.flush()
 
@@ -392,7 +405,10 @@ def main():
     os.makedirs(mount_dir, exist_ok=True)
     os.makedirs(ddir, exist_ok=True)
     mountpoint = tempfile.mkdtemp(prefix="btstrm-", dir=mount_dir)
+
+    # atexit
     atexit.register(lambda: cleanup(mountpoint))
+    # atexit.register(cleanup_temp_files)
 
 
 
@@ -449,7 +465,12 @@ def main():
 
     finally:
         subprocess.call(["fusermount", "-z", "-u", mountpoint])
-        
+
     exit(mountpoint, status)
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Interrupted by user")
+        cleanup_temp_files()
+        sys.exit(1)
