@@ -23,12 +23,50 @@ from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 from unidecode import unidecode
-
+import configparser
 
 # Configuration
-LANG="es-ES"
-JACKETT_API_KEY = ""
-JACKETT_URL = "http://127.0.0.1:9117"
+def load_config():
+    default_config = {
+        'LANG': 'es-ES',
+        'JACKETT_API_KEY': '',
+        'JACKETT_URL': 'http://127.0.0.1:9117'
+    }
+
+    config = configparser.ConfigParser()
+
+    config_dir = os.path.join(os.path.expanduser('~'), '.config')
+
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+
+    config_path = os.path.join(config_dir, "btstrm.conf")
+
+    if not os.path.exists(config_path):
+        print("Config file not found, creating one with default values...")
+
+        config['DEFAULT'] = default_config
+
+        with open(config_path, 'w') as f:
+            config.write(f)
+
+    else:
+
+        try:
+            config.read(config_path)
+            for key in default_config.keys():
+                if key not in config['DEFAULT']:
+                    raise KeyError(f"Key {key} missing from existing configuration.")
+
+                else:
+                    value = str(config.get('DEFAULT', key))
+                    globals()[key] = value
+
+
+        except Exception as e:
+            print(f"Error loading settings: {e}")
+
+load_config()
 extensions = ("mp4", "m4v", "mkv", "avi", "mpg", "mpeg", "flv", "webm")
 home_dir = os.path.expanduser('~')
 players = (
@@ -224,6 +262,7 @@ def add_to_playlist(completed_files):
     except Exception as e:
         print(f"Error: {e}")
 
+
 def read_log(log_file):
     trackers = {}
     total_pieces_downloaded = 0
@@ -363,7 +402,6 @@ def main():
         while not os.listdir(mountpoint):
             time.sleep(0.25)
 
-        # DEBUG
         subdirs = [os.path.join(ddir, d) for d in os.listdir(ddir) if os.path.isdir(os.path.join(ddir, d))]
         last_created_dir = max(subdirs, key=os.path.getmtime)
         log = last_created_dir + "/log.txt"
