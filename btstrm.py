@@ -224,7 +224,7 @@ def call_fzf_with_results(results):
         temp_file.flush()
 
         selected = subprocess.check_output(['fzf', '--height=20', '--no-sort', '--delimiter', '\t', '--with-nth', '1,2,3',
-                                   "--preview", "echo {} | awk -F'\t' '{print \"\\033[1mName:\\033[0m \", $1, \"\\n\\033[1mSeeders:\\033[0m \", $2, \"\\n\\033[1mSize:\\033[0m \", $3}'", "--preview-window", "right:60%:wrap",
+                                   "--preview", "echo {} | awk -F'\t' '{print \"\\033[1mName:\\033[0m \", $1, \"\\n\\033[1mSeeders:\\033[0m \", $2, \"\\n\\033[1mSize:\\033[0m \", $3}'", "--preview-window", "right:wrap",
                                    '-q', ''], stdin=open(temp_file.name))
 
 
