@@ -22,6 +22,8 @@ from urllib.parse import quote
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
+from unidecode import unidecode
+
 
 # Configuration
 LANG="es-ES"
@@ -43,8 +45,8 @@ def fetch_movie_data(search_term, language=LANG):
 
     headers = {
         'Accept-Encoding': 'gzip, deflate, br',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
-    }
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:122.0) Gecko/20100101 Firefox/122.0',
+  }
 
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
@@ -55,7 +57,7 @@ def fetch_movie_data(search_term, language=LANG):
 
 def parse_html_for_posters_and_titles(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
-    images = soup.select('img[loading][class="poster"][alt]')
+    images = soup.select('img[loading][class="poster w-[100%]"][alt]')
     results = []
     for image in images:
         srcset = image.get('srcset').split(',')[-1].strip().split(' ')[0]
@@ -154,8 +156,27 @@ def search_torrents(query, indexer):
     return torrents
 
 
+def normalize_query(query):
+    ascii_query = unidecode(query)
+    return ascii_query
+
 def search_torrents_threaded(query, indexer):
-    return search_torrents(query, indexer)
+    non_ascii_letters = ['ú', 'ñ', 'á', 'é', 'í', 'ó', 'ü'
+                         'á', 'é', 'í', 'ó', 'ú', 'ý',
+                         'à', 'è', 'ì', 'ò', 'ù',
+                         'ä', 'ë', 'ï', 'ö','ü','ÿ',
+                         'â', 'ê', 'î', 'ô', 'û',
+                         'ç', 'ğ', 'ı', 'ş', 'ñ',
+                         'ø', 'å']
+
+    if any(letter in query for letter in non_ascii_letters):
+        ascii_query = normalize_query(query)
+        torrents = search_torrents(query, indexer) + search_torrents(ascii_query, indexer)
+    else:
+        torrents = search_torrents(query, indexer)
+
+    torrents_unique = list({v['link']: v for v in torrents}.values())
+    return torrents_unique
 
 def call_fzf_with_results(results):
     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
@@ -202,7 +223,6 @@ def add_to_playlist(completed_files):
             print("impd not found in PATH.")
     except Exception as e:
         print(f"Error: {e}")
-
 
 def read_log(log_file):
     trackers = {}
