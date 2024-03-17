@@ -473,4 +473,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Interrupted by user")
         cleanup_temp_files()
+        subprocess.call(["fusermount", "-z", "-u", mountpoint])
         sys.exit(1)
