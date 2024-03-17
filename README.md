@@ -67,7 +67,7 @@ python btstrm.py [options] [URI]
 Options:
 - `-p PLAYER`, `--player PLAYER`: Specify the media player to use for streaming (default: auto-detect)
 - `-k`, `--keep`: Keep the downloaded files after streaming (default: delete files)
-- `-i`, `--impd`: Add the downloaded files to Plex using impd (default: disabled)
+- `-i`, `--impd`: Add the downloaded files to impd playlist (default: disabled)
 - `-t TITLE`, `--title TITLE`: Search for alternative movie titles and select using fzf
 
 URI:
