@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "btstrm"
+version = "0.1.0"
+description = "A script to stream torrents using BTFS"
+readme = "README.md"
+authors = [{ name = "asakura42" }]
+license = {text = "GPL-3"}
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["torrent", "streaming", "btfs"]
+dependencies = [
+    "requests",
+    "tqdm",
+    "colorama",
+    "unidecode",
+    "beautifulsoup4",
+]
+
+[project.scripts]
+btstrm = "btstrm.__main__:main"
+
+[project.urls]
+"Homepage" = "https://github.com/asakura42/btstrm"
+"Bug Tracker" = "https://github.com/asakura42/btstrm/issues"
