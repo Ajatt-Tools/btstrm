@@ -19,9 +19,10 @@
 Before using `btstrm`, ensure that you have the following dependencies installed:
 
 - Python 3.x
+- Player of your choice: `mpv`, `vlc` or `omxplayer` (for RPi)
 - `btfs` (BitTorrent Filesystem)
 - `fzf` (fuzzy finder)
-- `Jackett` (for torrent indexer integration)
+- `Jackett` (**optional**, but **highly recommended** for torrent search integration)
 - `impd` (**optional**, for language immersion enthusiasts)
 - `chafa` (for displaying movie posters)
 - Required Python packages: `requests`, `tqdm`, `colorama`, `beautifulsoup4`, `unidecode`
@@ -94,7 +95,7 @@ Contributions to `btstrm` are welcome! If you find any bugs, have feature reques
 
 ## Acknowledgements
 
-`btstrm` was inspired by the need for a simple and efficient way to stream torrents from the command line. It wouldn't have been possible without the following projects:
+`btstrm` was inspired by the need for a simple and efficient way to stream torrents from the command line. It wouldn't have been possible without the following projects and some codebase from developers:
 
 - btfs: https://github.com/johang/btfs
 - fzf: https://github.com/junegunn/fzf
