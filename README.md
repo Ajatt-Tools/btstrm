@@ -27,6 +27,8 @@ Before using `btstrm`, ensure that you have the following dependencies installed
 - `chafa` (for displaying movie posters)
 - Required Python packages: `requests`, `tqdm`, `colorama`, `beautifulsoup4`, `unidecode`
 
+At ArchLinux you can find all these programs in repos or AUR.
+
 ## Installation via PyPi
 
 ```bash
