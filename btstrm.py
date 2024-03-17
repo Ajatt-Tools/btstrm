@@ -131,11 +131,11 @@ def load_images_threaded(urls):
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(urls), desc='Loading images', ncols=70):
             try:
                 tmp_file_name = future.result()
-                images.append(tmp_file_name)
+                url = futures[future]
+                images.append((tmp_file_name, url))
             except Exception as e:
                 print(f"Error loading image: {e}")
-    return images
-
+    return sorted(images, key=lambda x: urls.index(x[1]))
 
 def which(x):
     for d in os.getenv("PATH", "").split(":"):
@@ -340,7 +340,7 @@ def main():
         loaded_posters = load_images_threaded(poster_urls)
 
         with tempfile.NamedTemporaryFile(mode='w+', delete=True) as temp_file:
-            for (srcset, title), poster_file in zip(results, loaded_posters):
+            for (srcset, title), (poster_file, _) in zip(results, loaded_posters):
                 temp_file.write(f"{poster_file}\t{title}\n")
             temp_file.flush()
 
