@@ -234,9 +234,6 @@ def call_fzf_with_results(results):
                                    "--preview", "echo {} | awk -F'\t' '{print \"\\033[1mName:\\033[0m \", $1, \"\\n\\033[1mSeeders:\\033[0m \", $2, \"\\n\\033[1mSize:\\033[0m \", $3}'", "--preview-window", "right:wrap",
                                    '-q', ''], stdin=open(temp_file.name))
 
-
-
-
         return selected.decode('utf-8').split('\t')[-1]
 
 
