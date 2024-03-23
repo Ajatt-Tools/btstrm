@@ -28,15 +28,19 @@ import atexit
 
 temp_files = []
 
-# Configuration
+class CaseSensitiveConfigParser(configparser.ConfigParser):
+    def optionxform(self, optionstr):
+        return optionstr
+
 def load_config():
     default_config = {
         'LANG': 'es-ES',
         'JACKETT_API_KEY': '',
-        'JACKETT_URL': 'http://127.0.0.1:9117'
+        'JACKETT_URL': 'http://127.0.0.1:9117',
+        'TIMEOUT': '30'
     }
 
-    config = configparser.ConfigParser()
+    config = CaseSensitiveConfigParser()
 
     config_dir = os.path.join(os.path.expanduser('~'), '.config')
 
@@ -60,11 +64,9 @@ def load_config():
             for key in default_config.keys():
                 if key not in config['DEFAULT']:
                     raise KeyError(f"Key {key} missing from existing configuration.")
-
                 else:
                     value = str(config.get('DEFAULT', key))
                     globals()[key] = value
-
 
         except Exception as e:
             print(f"Error loading settings: {e}")
@@ -177,7 +179,7 @@ def get_jackett_indexers():
 def search_torrents(query, indexer):
     torrents = []
     try:
-        response = requests.get(f"{JACKETT_URL}/api/v2.0/indexers/{indexer}/results/torznab/api?apikey={JACKETT_API_KEY}&q={query}", timeout=20)
+        response = requests.get(f"{JACKETT_URL}/api/v2.0/indexers/{indexer}/results/torznab/api?apikey={JACKETT_API_KEY}&q={query}", timeout=int(TIMEOUT))
         response.raise_for_status()
         xml_response = ET.fromstring(response.content)
 
