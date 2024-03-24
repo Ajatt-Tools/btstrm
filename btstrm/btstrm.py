@@ -440,8 +440,8 @@ def main():
     parser.add_argument(
         "-s",
         "--subtitles",
-        nargs='?',
-        const='',
+        nargs="?",
+        const="",
         default=False,
         help="Download subtitles using osd program",
     )
@@ -589,16 +589,16 @@ def main():
 
         read_log(log)
 
-
         if args.subtitles is not False:
             for file_path in file_paths:
                 while not os.path.exists(file_path):
                     time.sleep(1)
 
                 # If there is a subtitle name provided.
-                if args.subtitles != '':
-                    result = subprocess.run(["osd", file_path],
-                                            stderr=subprocess.PIPE, text=True)
+                if args.subtitles != "":
+                    result = subprocess.run(
+                        ["osd", file_path], stderr=subprocess.PIPE, text=True
+                    )
 
                     if "No subtitles found." in result.stderr:
                         subprocess.run(["osd", "-c", args.subtitles, file_path])
@@ -612,7 +612,6 @@ def main():
         else:
             # For other players, just use original command.
             player_with_options = list(player)
-
 
         if media:
             status = subprocess.call(player_with_options + media, stdin=sys.stdin)
