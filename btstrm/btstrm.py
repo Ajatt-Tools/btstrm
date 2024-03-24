@@ -438,6 +438,14 @@ def main():
         "-t", "--title", action="store", help="search for alternative titles"
     )
     parser.add_argument(
+        "-s",
+        "--subtitles",
+        nargs='?',
+        const='',
+        default=False,
+        help="Download subtitles using osd program",
+    )
+    parser.add_argument(
         "URI",
         nargs="?",
         action="store",
@@ -581,8 +589,33 @@ def main():
 
         read_log(log)
 
+
+        if args.subtitles is not False:
+            for file_path in file_paths:
+                while not os.path.exists(file_path):
+                    time.sleep(1)
+
+                # If there is a subtitle name provided.
+                if args.subtitles != '':
+                    result = subprocess.run(["osd", file_path],
+                                            stderr=subprocess.PIPE, text=True)
+
+                    if "No subtitles found." in result.stderr:
+                        subprocess.run(["osd", "-c", args.subtitles, file_path])
+
+                else:  # Case when -s/--subtitle was passed with no argument.
+                    subprocess.run(["osd", file_path])
+
+        if "mpv" in player[0]:
+            sub_option = f'--sub-file-paths={":".join([dirpath for dirpath, _, _ in os.walk(last_created_dir + "/files")])}'
+            player_with_options = list(player) + [sub_option]
+        else:
+            # For other players, just use original command.
+            player_with_options = list(player)
+
+
         if media:
-            status = subprocess.call(list(player) + media, stdin=sys.stdin)
+            status = subprocess.call(player_with_options + media, stdin=sys.stdin)
         else:
             print("No video media found", file=sys.stderr)
             status = 3

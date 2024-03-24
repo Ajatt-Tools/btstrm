@@ -13,6 +13,7 @@
 - Integration with [`impd`](https://github.com/ajatt-tools/impd) for condensing videos for language learning
 - Real-time display of download progress and peer information
 - Support for multiple languages and configurable settings
+- Automatically subtitle searching using great [`osd`](https://github.com/druidamix/Opensubtitles-downloader) program
 
 ## Prerequisites
 
@@ -25,6 +26,7 @@ Before using `btstrm`, ensure that you have the following dependencies installed
 - `Jackett` (**optional**, but **highly recommended** for torrent search integration)
 - `impd` (**optional**, for language immersion enthusiasts)
 - `chafa` (for displaying movie posters)
+- [osd](https://github.com/druidamix/Opensubtitles-downloader) (**optional**, for subtitle downloading)
 - Required Python packages: `requests`, `tqdm`, `colorama`, `beautifulsoup4`, `unidecode`
 
 At ArchLinux you can find all these programs in repos or AUR.
@@ -71,6 +73,7 @@ Options:
 - `-p PLAYER`, `--player PLAYER`: Specify the media player to use for streaming (default: auto-detect)
 - `-k`, `--keep`: Keep the downloaded files after streaming (default: delete files)
 - `-i`, `--impd`: Add the downloaded files to impd playlist (default: disabled)
+- `-s [MOVIE_NAME]`, `--subtitles [MOVIE_NAME]`: Search opensubtitles for subs with optional name title
 - `-t TITLE`, `--title TITLE`: Search for alternative movie titles and select using fzf
 
 URI:
