@@ -614,22 +614,29 @@ def main():
             # For other players, just use original command.
             player_with_options = list(player)
 
-
-
         if len(media) == 1:
             print(f"Playing: {os.path.basename(media[0])}")
             status = subprocess.call(player_with_options + media, stdin=sys.stdin)
         elif len(media) > 1:
             while media:
-                selection_list = "\n".join(f"{index}: {os.path.basename(path)}" for index, path in enumerate(media))
-                process = subprocess.Popen(['fzf', '--with-nth', '2..'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-                selected, _ = process.communicate(input=selection_list.encode('utf-8'))
+                selection_list = "\n".join(
+                    f"{index}: {os.path.basename(path)}"
+                    for index, path in enumerate(media)
+                )
+                process = subprocess.Popen(
+                    ["fzf", "--with-nth", "2.."],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                )
+                selected, _ = process.communicate(input=selection_list.encode("utf-8"))
                 if process.returncode == 0:
-                    selected_index = int(selected.decode('utf-8').split(':')[0])
+                    selected_index = int(selected.decode("utf-8").split(":")[0])
                     selected_file = media[selected_index]
 
                     print(f"Playing: {os.path.basename(selected_file)}")
-                    status = subprocess.call(player_with_options + [selected_file], stdin=sys.stdin)
+                    status = subprocess.call(
+                        player_with_options + [selected_file], stdin=sys.stdin
+                    )
 
                     if REMOVE_PLAYED_FROM_LIST:
                         media.pop(selected_index)
@@ -637,9 +644,8 @@ def main():
                     print("Exiting.")
                     break
 
-
         # if media:
-            # status = subprocess.call(player_with_options + media, stdin=sys.stdin)
+        # status = subprocess.call(player_with_options + media, stdin=sys.stdin)
         else:
             print("No video media found", file=sys.stderr)
             status = 3
