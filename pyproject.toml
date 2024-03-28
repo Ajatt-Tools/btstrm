@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "btstrm"
-version = "0.1.6"
+version = "0.1.7"
 description = "A script to stream torrents using BTFS"
 readme = "README.md"
 authors = [{ name = "asakura42" }]
