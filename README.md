@@ -41,9 +41,9 @@ pipx install btstrm
 
 1. Clone the repository or download the `btstrm.py` file.
 
-2. Install the required Python packages:
+2. Install `btstrm` package:
    ```
-   pip install requests tqdm colorama beautifulsoup4 unidecode
+   python -m pip install .
    ```
 
 3. Install btfs, fzf, and Jackett by following their respective installation instructions.
@@ -56,6 +56,8 @@ pipx install btstrm
    LANG = es-ES
    JACKETT_API_KEY = your_jackett_api_key
    JACKETT_URL = http://127.0.0.1:9117
+   TIMEOUT=30
+   REMOVE_PLAYED_FROM_LIST = True
    ```
    Replace `your_jackett_api_key` with your actual Jackett API key and adjust the `JACKETT_URL` if necessary.
 
